@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8" emacsmode="-*- markdown -*-">
+        <title>Deriving the Output Size of a Convolutional Layer</title>
+        <link rel="stylesheet" href="./../../assets/style.css">
+        <link rel="stylesheet" href="./../../assets/blogpost.css">
+    </head>
+
+    <body>
+        
+        <main id="main">
+
+            <header>
+                <div>
+                    <a href="./../../index.html">
+                        Thierno Barry
+                    </a>
+                </div>
+
+                <nav>
+                    <a href="./../../index.html">
+                        Blog
+                    </a>
+                </nav>
+            </header>
+
+            <main id="markdeep-content">
+
+                <markdeep>                      
+                    <div class="title">Deriving the Output Size of a Convolutional Layer</div>
+                    <div class="subtitle"> Thierno Barry <br> February 11, 2025 </div> 
+    
+                    Welcome to this blog post, where we will derive, step-by-step, the expression for calculating the output size of a convolutional layer, as it is implemented in popular frameworks like [PyTorch](https://pytorch.org/docs/stable/generated/torch.nn.Conv2d.html) and [Tensorflow](https://www.tensorflow.org/api_docs/python/tf/nn/conv2d#args).
+                    
+                    This derivation will account for four primary parameters of convolutional layers: **kernel size, padding, stride**, and **dilation**—all commonly adjusted in practice.
+                    
+                    
+                    For simplicity and clarity, we will focus on single-channel convolutions and omit aspects such as batching that do not affect the height and width of the output.
+                    
+                    
+                    ### Simplest Case: No Padding, Stride of 1, and Dilation Rate of 1
+                    
+                    Let's start with the simplest case of a convolutional layer: **no padding, a stride of 1**, and **a dilation rate of 1**—where only the kernel size and input size determine the output size. In this scenario, the convolution operation involves sliding the filter (or kernel) over the input feature map, performing element-wise multiplication, and summing the results. The resulting output is known as the output feature map.
+                    
+                    Figure [1] shows an example of this operation using a kernel of size $3 \times 3$ and an input of size $5 \times 5$.
+                    
+                    
+                    
+                    ![Figure [1]: Example of a 2D convolution operation with a $3 \times 3$ kernel and a $5 \times 5$ input, using no padding, a stride of 1, and a dilation rate of 1.](./cnn_i5_p0_s1_dr1_k3.gif width="90%")
+                    
+                    To understand how the output size depends on both the input size and the kernel size, let's focus on the element in the last row and last column of the kernel as it slides over the input (see Figure [2]). Observing this movement, we see that the output width is exactly the number of unique columns of the input this *last element* covers. Similarly, the output height is the number of unique rows this *last element* covers.
+                    
+                    
+                    ![Figure [2]: Illustration of the last element of the kernel traversing the input, highlighting the number of positions it covers along the width and height.](./cnn_i3_p0_s1_dr1_k5_last_element.gif width="90%")
+                    
+                    If we let $k_w$ represents the kernel width, only the first $k_w - 1 = 3 - 1 = 2$ columns are not visited by this element (Figure [3]). Thus, the output width is given by  $$O_w = I_w - (k_w - 1)=3$$ where $I_w$ is the input width .
+                    
+                    
+                    
+                    ![Figure [3]: The first $k_w - 1$ columns and $k_h - 1$ lines are not visited by the bottom-right element of the kernel.](./cnn_i3_p0_dr1_k3_last_element_annotated.png width="100%")
+                    
+                    We proceed similarly for the output height. Letting $k_h$ denotes the kernel height, the output height can be derived by observing that the first $k_h - 1$ rows of the input are not covered. This gives us: $$O_h = I_h - (k_h - 1) = 5 - (3 - 1) = 3$$ where $I_h$ is the input height.
+                    
+                    To summarize, the dimensions $O_w \times O_h$ of the output feature map for a convolutional layer with no padding, a stride of 1, and dilation rate of 1, are given by:
+                    
+                    $$O_w = I_w - (k_w - 1)$$ $$O_h = I_h - (k_h - 1)$$
+                    
+                    
+                    !!!
+                        As you may have noticed, the expression for the output height has a similar form to that of the output width. This is expected since the convolution operator behaves the same way along the height and width axes. Therefore, if we have an expression for the width, we also have one for the height. This pattern generalizes to convolutions in higher dimensions (e.g., 3D convolutions).
+                    
+
+                    
+                    ### Accounting for Stride
+
+                    It is common to encounter convolutional layers with a stride greater than 1 in neural network architectures. When the stride, denoted as 𝑆, is greater than 1, the kernel shifts by 𝑆 pixels at each step instead of moving one pixel at a time. This larger step size results in a smaller output feature map, as fewer positions are covered during the convolution. However, it also increases the **receptive field** of each output element in a multi-layer setting, allowing the overall network to capture more spatial context from the input using fewer of layers and consequently fewer parameters.
+                    
+                    !!! tip
+                        The **receptive field** is the part of the network's input that influences a particular output neuron. 
+                    
+                    Figure [4] illustrates this operation for a kernel of size $3 \times 3$, a stride of 2, and an input of size  $5 \times 5$. Here, the output size is 2 x 2, in contrast of the 3 x 3 output produced with a stride of 1 (Figure [1]).
+                    
+                    ![Figure [4]: Example of a 2D convolution with a kernel of size  $3 \times 3$ and a stride of 2, applied to a  $5 \times 5$ input.](./cnn_i5_p0_s2_dr1_k3.gif width="100%")
+                    
+                    When the stride is greater than 1, the previous output size formula (which assumes a stride of 1) no longer holds. Intuitively, we might expect to simply divide the output size by 𝑆, since we are moving 𝑆 columns or rows with each step. However, this division does not always yield an integer result (as in Figure [1] and Figure [4]), so we need to carefully analyze the effect of a stride greater than 1.
+                    
+                    
+                    
+                    !!!
+                        Another situation to account for arises when there are not enough rows or columns remaining at the edges of the input to fully fit the kernel. In such cases, we assume that these incomplete areas at the edges are ignored (this is the behavior implemented by PyTorch). Figure [5] illustrates this behavior.
+                        <br> ![Figure [5]: Ignoring rows/columns that cannot fully accommodate the kernel.](./cnn_i5x6_p0_s2_dr1_k3.gif width="100%") <br>
+                        With this understanding, let's proceed to derive the expression for the output dimensions when a stride is applied.
+                    
+                    
+                    <br>
+                    Let’s once again focus on the element in the last row and last column of the kernel as it moves over the input. As before, the output width and height correspond to the number of unique columns and rows this element visits, respectively. 
+                    
+                    ![Figure [6]: Visualizing the last element of the kernel as it moves across the input.](./cnn_i5_p0_s2_dr1_k3_last_element_anotated.gif width="100%")
+                    
+                    Initially, the filter is positioned at the top-left corner of the input, corresponding to the first column (and first row) in the output. We then slide the filter to the right by $s_w$ columns at each step until no further shifts are possible, with each step adding another column to the output.
+                    
+                    
+                    The number of columns to the right of the kernel when positioned at the top-left corner is $I_w - k_w$ (see Figure [6]). Therefore, the number of shifts possible is
+                    $\left\lfloor \frac{I_w - k_w}{s_w} \right\rfloor$. Including the initial column from the starting position, the output width is:
+                    
+                    $$O_w = \left\lfloor \frac{I_w - k_w}{s_w} \right\rfloor + 1$$
+                    
+                    Similarly, we have for the ouput height:
+                    
+                    $$O_h = \left\lfloor \frac{I_h - k_h}{s_h} \right\rfloor + 1$$
+                    
+                        
+                    
+                    
+                    
+                    ### Accounting for Padding
+
+                    Padding is a standard technique to control the output size of a convolutional layer. It increases the dimensions of the input by adding extra rows and columns to its borders. These added values are typically set to a predefined constant—such as zero in the case of zero-padding—but other approaches, like replication (repeating edge values) or reflection (mirroring the input), are also commonly employed.
+
+                    Figure [7] illustrates this operation, showing how padding can help maintain the size of the input.
+
+                    ![Figure [7]: Illustration of padding with a padding size of 1 on each side.](./padding_cnn_i5_p1_s1_dr1_k3.png width="90%")
+
+                    Hence, padding acts on the output size only by increasing the *effective input size* before the convolution operation is performed. Thus, to account for it in our output size formulas, we simply have to adjust the input dimensions in the expressions we already derived.
+
+
+                    Let $p_l$ and $p_r$ be the *padding sizes* at the left and right of the input, respectively. The effective width of the padded input is:
+
+                    $$I_w + p_l + p_r$$
+
+                    Substituting this into our previously derived formula for the ouput width, we obtain:
+
+                    $$O_w = \left\lfloor \frac{I_w+p_l+p_r - k_w}{s_w} \right\rfloor + 1$$
+
+                    Similarly, if we let $p_t$ and $p_b$ be the *padding sizes* at the top and bottom of the input, respectivelly, the output height is given by:
+
+
+                    $$O_h = \left\lfloor \frac{I_h+p_t+p_b - k_h}{s_h} \right\rfloor + 1$$
+
+
+
+
+
+                    ### Accounting for Dilation
+
+                    As striding, dilation alows for an increase in the receptive field of a convolutional network without adding more parameters. It works by introducing spacing between the elements of the kernel, effectively increasing its size.
+                    
+                    
+                    More precisely, a dilation of rate $d_w$ along the width/columns axis inserts $d_w-1$ columns of zeros between each adjacent column of the kernel. Similarly, a dilation of rate $d_h$ along the height/row axis inserts $d_h-1$ rows of zeros between each adjacent row of the kernel. A dilation rate of $d_w=d_h=1$ corresponds to a standard convolution with no spacing. Figure [8] illustrates this technique.
+                    
+                    ![Figure [8]: Illustration of dilation with a dilation rate of 2.](./dilation_k3_dr2.png width="100%")
+                    
+                    To calculate the output size when dilation is applied, we simply replace the original kernel height and width in the previous expressions with the height and width of the dilated kernel.
+                    
+                    
+                    **Dimensions of the Dilated Kernel**
+                    
+                    For a kernel of width $k_w$, there are $k_w - 1$ positions between adjacent columns. For each of these positions, we insert $d_w - 1$ columns, resulting in $(k_w-1) \cdot (d_w-1)$ additional columns. We obtain the width of the dilated kernel by adding the original kernel width $k_w$:
+                    
+                    $$k_{dilated, w} = k_w + (k_w-1) \cdot (d_w-1) = d_w \cdot (k_w-1) + 1$$
+                    
+                    Similarly, the height of the dilated kernel is:
+                    
+                    $$k_{dilated, h} = k_h + (k_h-1) \cdot (d_h-1) = d_h \cdot (k_h-1) + 1$$
+                    
+                    
+                    **Updated Formula**
+                    
+                    Substituting the dilated kernel dimensions into the previously derived formulas for the output size, we get:
+                    
+                    $$O_w = \left\lfloor \frac{I_w+p_l+p_r - d_w \cdot (k_w-1) + 1 }{s_w} \right\rfloor + 1$$
+                    
+                    $$O_h = \left\lfloor \frac{I_h+p_t+p_b - d_h \cdot (k_h-1) + 1 }{s_h} \right\rfloor + 1$$
+                    
+                    
+                    ### Summary of the Full Expression
+                    
+                    To summarize, the output size of a convolutional layer with padding, stride and dilation is given by:
+                    
+                    $$O_w = \left\lfloor \frac{I_w+p_l+p_r - d_w \cdot (k_w-1) + 1 }{s_w} \right\rfloor + 1$$
+                    
+                    $$O_h = \left\lfloor \frac{I_h+p_t+p_b - d_h \cdot (k_h-1) + 1 }{s_h} \right\rfloor + 1$$
+                    
+                    where:
+                    
+                    - $I_w, I_h$: input width and height
+                    
+                    - $k_w, k_h$: kernel width and height
+                    
+                    - $p_l, p_r, p_t, p_b$: padding size on the left, right, top, and bottom sides, respectively
+                    
+                    - $s_w, s_h$: stride along width and height
+                    
+                    - $d_w, d_h$: dilation rates along width and height
+
+
+    
+                </markdeep>
+
+                <div class="markdeepFooter">
+                    <i>formatted by <a href="https://casual-effects.com/markdeep" style="color:#999">Markdeep&nbsp;1.18&nbsp;&nbsp;</a></i>
+                    <div style="display:inline-block;font-size:13px;font-family:'Times New Roman',serif;vertical-align:middle;transform:translate(-3px,-1px)rotate(135deg);">✒</div>
+                </div>
+
+            </main>
+
+            <footer>
+                © 2025 Thierno Barry
+            </footer>
+        
+        </main>
+
+        <script>
+            window.markdeepOptions = {
+                mode: 'html',
+                numberHeaders: false,   // Disable title numbering,
+                toc: true,
+                tocDepth: 1,
+                tocStyle: "short",
+            };
+        </script>
+        <!-- Markdeep: --><style class="fallback">body{visibility:hidden}</style>
+        <script src="./../../assets/markdeep.min.js" charset="utf-8"></script>
+    </body>
+
+</html>
