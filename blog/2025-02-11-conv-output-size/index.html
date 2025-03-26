@@ -97,7 +97,7 @@
                     <br>
                     Let’s once again focus on the element in the last row and last column of the kernel as it moves over the input. As before, the output width and height correspond to the number of unique columns and rows this element visits, respectively. 
                     
-                    ![Figure [6]: Visualizing the last element of the kernel as it moves across the input.](./cnn_i5_p0_s2_dr1_k3_last_element_anotated.gif width="100%")
+                    ![Figure [6]: Visualizing the last element of the kernel as it moves over the input.](./cnn_i5_p0_s2_dr1_k3_last_element_anotated.gif width="100%")
                     
                     Initially, the filter is positioned at the top-left corner of the input, corresponding to the first column (and first row) in the output. We then slide the filter to the right by $s_w$ columns at each step until no further shifts are possible, with each step adding another column to the output.
                     
@@ -148,7 +148,7 @@
                     As striding, dilation alows for an increase in the receptive field of a convolutional network without adding more parameters. It works by introducing spacing between the elements of the kernel, effectively increasing its size.
                     
                     
-                    More precisely, a dilation of rate $d_w$ along the width/columns axis inserts $d_w-1$ columns of zeros between each adjacent column of the kernel. Similarly, a dilation of rate $d_h$ along the height/row axis inserts $d_h-1$ rows of zeros between each adjacent row of the kernel. A dilation rate of $d_w=d_h=1$ corresponds to a standard convolution with no spacing. Figure [8] illustrates this technique.
+                    More precisely, a dilation of rate $d_w$ along the width axis inserts $d_w-1$ columns of zeros between each adjacent column of the kernel. Similarly, a dilation of rate $d_h$ along the height axis inserts $d_h-1$ rows of zeros between each adjacent row of the kernel. A dilation rate of $d_w=d_h=1$ corresponds to a standard convolution with no spacing. Figure [8] illustrates this technique.
                     
                     ![Figure [8]: Illustration of dilation with a dilation rate of 2.](./dilation_k3_dr2.png width="100%")
                     
@@ -170,18 +170,18 @@
                     
                     Substituting the dilated kernel dimensions into the previously derived formulas for the output size, we get:
                     
-                    $$O_w = \left\lfloor \frac{I_w+p_l+p_r - d_w \cdot (k_w-1) + 1 }{s_w} \right\rfloor + 1$$
+                    $$O_w = \left\lfloor \frac{I_w+p_l+p_r - d_w \cdot (k_w-1) - 1 }{s_w} \right\rfloor + 1$$
                     
-                    $$O_h = \left\lfloor \frac{I_h+p_t+p_b - d_h \cdot (k_h-1) + 1 }{s_h} \right\rfloor + 1$$
+                    $$O_h = \left\lfloor \frac{I_h+p_t+p_b - d_h \cdot (k_h-1) - 1 }{s_h} \right\rfloor + 1$$
                     
                     
                     ### Summary of the Full Expression
                     
                     To summarize, the output size of a convolutional layer with padding, stride and dilation is given by:
                     
-                    $$O_w = \left\lfloor \frac{I_w+p_l+p_r - d_w \cdot (k_w-1) + 1 }{s_w} \right\rfloor + 1$$
+                    $$O_w = \left\lfloor \frac{I_w+p_l+p_r - d_w \cdot (k_w-1) - 1 }{s_w} \right\rfloor + 1$$
                     
-                    $$O_h = \left\lfloor \frac{I_h+p_t+p_b - d_h \cdot (k_h-1) + 1 }{s_h} \right\rfloor + 1$$
+                    $$O_h = \left\lfloor \frac{I_h+p_t+p_b - d_h \cdot (k_h-1) - 1 }{s_h} \right\rfloor + 1$$
                     
                     where:
                     
